@@ -24,6 +24,8 @@ export function useTaskPool(userId?: string) {
   
   const isInitialized = useRef(false);
   const pendingDeletes = useRef<string[]>([]);
+  const tasksRef = useRef<Task[]>([]);
+  const lastRecalcAnchor = useRef<string | undefined>();
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -103,30 +105,90 @@ export function useTaskPool(userId?: string) {
     return () => clearTimeout(syncTimeout);
   }, [userId, tasks, anchorTime]);
 
-  // Recalculate schedule when tasks or anchorTime changes
-  // 只对未完成任务排程，已完成任务释放其时段，从当前锚点开始排剩余任务
+  tasksRef.current = tasks;
+
+  // 仅在锚点变化时（首次设置或点击重置）重新计算排程
   useEffect(() => {
-    if (anchorTime && tasks.length > 0) {
-      const uncompletedTasks = tasks.filter(t => t.status !== 'completed');
+    if (!anchorTime) {
+      setScheduledTasks([]);
+      lastRecalcAnchor.current = undefined;
+      return;
+    }
+    if (anchorTime === lastRecalcAnchor.current) return;
+    lastRecalcAnchor.current = anchorTime;
+
+    const currentTasks = tasksRef.current;
+    if (currentTasks.length === 0) {
+      setScheduledTasks([]);
+      return;
+    }
+
+    const uncompletedTasks = currentTasks.filter(t => t.status !== 'completed');
+    const completedTasks = currentTasks.filter(t => t.status === 'completed');
+
+    const newScheduled = uncompletedTasks.length > 0
+      ? scheduleTasks(uncompletedTasks, anchorTime).map(updateTaskStatus)
+      : [];
+
+    const completedScheduled: ScheduledTask[] = completedTasks.map(t => ({
+      ...t,
+      calculatedStartTime: t.preservedStartTime ?? t.actualStartTime ?? t.startTime ?? '',
+      calculatedEndTime: t.preservedEndTime ?? t.actualEndTime ?? t.endTime ?? '',
+    }));
+
+    const merged = [...newScheduled, ...completedScheduled].sort((a, b) =>
+      dayjs(a.calculatedStartTime).diff(dayjs(b.calculatedStartTime))
+    );
+    setScheduledTasks(merged);
+  }, [anchorTime]);
+
+  // 任务变化时只做增量更新，不重新计算时间（保留上次同步时的排程）
+  useEffect(() => {
+    if (!anchorTime) return;
+
+    setScheduledTasks(prev => {
+      const prevMap = new Map(prev.map(t => [t.id, t]));
+
       const completedTasks = tasks.filter(t => t.status === 'completed');
+      const activeTasks = tasks.filter(t => t.status !== 'completed');
 
-      const newScheduled = uncompletedTasks.length > 0
-        ? scheduleTasks(uncompletedTasks, anchorTime).map(updateTaskStatus)
-        : [];
+      const result: ScheduledTask[] = [];
 
-      const completedScheduled: ScheduledTask[] = completedTasks.map(t => ({
-        ...t,
-        calculatedStartTime: t.preservedStartTime ?? t.actualStartTime ?? t.startTime ?? '',
-        calculatedEndTime: t.preservedEndTime ?? t.actualEndTime ?? t.endTime ?? '',
-      }));
+      for (const task of activeTasks) {
+        const existing = prevMap.get(task.id);
+        if (existing) {
+          result.push({ ...existing, ...task, calculatedStartTime: existing.calculatedStartTime, calculatedEndTime: existing.calculatedEndTime });
+        } else {
+          const lastEnd = prev.length > 0
+            ? prev.reduce((latest, t) => dayjs(t.calculatedEndTime).isAfter(latest) ? dayjs(t.calculatedEndTime) : latest, dayjs(anchorTime))
+            : dayjs(anchorTime);
+          const start = lastEnd.toISOString();
+          const end = dayjs(start).add(task.estimatedDuration, 'minute').toISOString();
+          result.push({
+            ...task,
+            calculatedStartTime: start,
+            calculatedEndTime: end,
+          } as ScheduledTask);
+        }
+      }
 
-      const merged = [...newScheduled, ...completedScheduled].sort((a, b) =>
+      for (const task of completedTasks) {
+        const existing = prevMap.get(task.id);
+        if (existing) {
+          result.push({ ...existing, ...task, calculatedStartTime: existing.calculatedStartTime, calculatedEndTime: existing.calculatedEndTime });
+        } else {
+          result.push({
+            ...task,
+            calculatedStartTime: task.preservedStartTime ?? task.actualStartTime ?? task.startTime ?? '',
+            calculatedEndTime: task.preservedEndTime ?? task.actualEndTime ?? task.endTime ?? '',
+          } as ScheduledTask);
+        }
+      }
+
+      return result.sort((a, b) =>
         dayjs(a.calculatedStartTime).diff(dayjs(b.calculatedStartTime))
       );
-      setScheduledTasks(merged);
-    } else {
-      setScheduledTasks([]);
-    }
+    });
   }, [tasks, anchorTime]);
 
   // Periodically update task statuses (check for overdue)
