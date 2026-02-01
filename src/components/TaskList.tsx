@@ -28,6 +28,7 @@ interface TaskListProps {
   onPause: (id: string) => void;
   onComplete: (id: string) => void;
   onDelete?: (id: string) => void;
+  onEdit?: (task: ScheduledTask) => void;
   onReorder?: (activeIds: string[]) => void;
   hasAnchorTime?: boolean;
 }
@@ -35,7 +36,7 @@ interface TaskListProps {
 // 长按 400ms 后激活拖拽，避免与滚动冲突
 const longPressActivation = { delay: 400, tolerance: 5 };
 
-export function TaskList({ tasks, currentTaskId, taskStartTime, onStart, onPause, onComplete, onDelete, onReorder, hasAnchorTime = true }: TaskListProps) {
+export function TaskList({ tasks, currentTaskId, taskStartTime, onStart, onPause, onComplete, onDelete, onEdit, onReorder, hasAnchorTime = true }: TaskListProps) {
   const [showCompleted, setShowCompleted] = useState(false);
   const [elapsedTick, setElapsedTick] = useState(0);
 
@@ -127,6 +128,9 @@ export function TaskList({ tasks, currentTaskId, taskStartTime, onStart, onPause
               )}
               <button className="btn btn-complete btn-small" onClick={() => onComplete(task.id)} disabled={!hasAnchorTime}>完成</button>
             </>
+          )}
+          {onEdit && (
+            <button className="btn btn-edit btn-small" onClick={() => onEdit(task)}>编辑</button>
           )}
           {onDelete && (
             <button className="btn btn-delete btn-small" onClick={() => confirm(`确定要删除任务"${task.name}"吗？`) && onDelete(task.id)}>删除</button>
@@ -229,6 +233,9 @@ export function TaskList({ tasks, currentTaskId, taskStartTime, onStart, onPause
                       </div>
                     </div>
                     <div className="task-actions">
+                      {onEdit && (
+                        <button className="btn btn-edit btn-small" onClick={() => onEdit(task)}>编辑</button>
+                      )}
                       {onDelete && (
                         <button
                           className="btn btn-delete btn-small"

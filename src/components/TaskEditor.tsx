@@ -3,15 +3,18 @@ import { Task } from '../types';
 
 interface TaskEditorProps {
   selectedDate: string;
+  task?: Task; // 有则编辑模式
   onAdd: (task: Omit<Task, 'id' | 'status'>) => void;
+  onUpdate?: (id: string, updates: Partial<Task>) => void;
   onClose: () => void;
 }
 
 const STORAGE_KEY_DURATION = 'taskEditor_lastDuration';
 const STORAGE_KEY_PRIORITY = 'taskEditor_lastPriority';
 
-export function TaskEditor({ selectedDate, onAdd, onClose }: TaskEditorProps) {
-  // Load last values from localStorage on mount
+export function TaskEditor({ selectedDate, task, onAdd, onUpdate, onClose }: TaskEditorProps) {
+  const isEdit = !!task;
+
   const getLastDuration = (): number => {
     const saved = localStorage.getItem(STORAGE_KEY_DURATION);
     return saved ? parseInt(saved, 10) : 30;
@@ -22,14 +25,26 @@ export function TaskEditor({ selectedDate, onAdd, onClose }: TaskEditorProps) {
     return (saved as 'low' | 'medium' | 'high') || 'medium';
   };
 
-  const [name, setName] = useState('');
-  const [date, setDate] = useState(selectedDate);
-  useEffect(() => { setDate(selectedDate); }, [selectedDate]);
-  const [duration, setDuration] = useState(getLastDuration);
-  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>(getLastPriority);
-  const [isFixed, setIsFixed] = useState(false);
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
+  const [name, setName] = useState(task?.name ?? '');
+  const [date, setDate] = useState(task?.date ?? selectedDate);
+  useEffect(() => { setDate(task?.date ?? selectedDate); }, [selectedDate, task?.date]);
+  const [duration, setDuration] = useState(task?.estimatedDuration ?? getLastDuration);
+  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>(task?.priority ?? getLastPriority);
+  const [isFixed, setIsFixed] = useState(task?.isFixed ?? false);
+  const [startTime, setStartTime] = useState(task?.startTime ? task.startTime.slice(0, 16) : '');
+  const [endTime, setEndTime] = useState(task?.endTime ? task.endTime.slice(0, 16) : '');
+
+  useEffect(() => {
+    if (task) {
+      setName(task.name);
+      setDate(task.date);
+      setDuration(task.estimatedDuration);
+      setPriority(task.priority);
+      setIsFixed(task.isFixed);
+      setStartTime(task.startTime ? task.startTime.slice(0, 16) : '');
+      setEndTime(task.endTime ? task.endTime.slice(0, 16) : '');
+    }
+  }, [task]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,26 +59,38 @@ export function TaskEditor({ selectedDate, onAdd, onClose }: TaskEditorProps) {
       return;
     }
 
-    onAdd({
-      date,
-      name: name.trim(),
-      estimatedDuration: duration,
-      priority,
-      isFixed,
-      startTime: isFixed ? new Date(startTime).toISOString() : undefined,
-      endTime: isFixed ? new Date(endTime).toISOString() : undefined,
-    });
+    if (isEdit && task && onUpdate) {
+      onUpdate(task.id, {
+        date,
+        name: name.trim(),
+        estimatedDuration: duration,
+        priority,
+        isFixed,
+        startTime: isFixed ? new Date(startTime).toISOString() : undefined,
+        endTime: isFixed ? new Date(endTime).toISOString() : undefined,
+      });
+    } else {
+      onAdd({
+        date,
+        name: name.trim(),
+        estimatedDuration: duration,
+        priority,
+        isFixed,
+        startTime: isFixed ? new Date(startTime).toISOString() : undefined,
+        endTime: isFixed ? new Date(endTime).toISOString() : undefined,
+      });
+    }
 
-    // Save current values to localStorage for next time
     localStorage.setItem(STORAGE_KEY_DURATION, duration.toString());
     localStorage.setItem(STORAGE_KEY_PRIORITY, priority);
 
-    // Reset form (but keep duration and priority for next time)
-    setName('');
-    setDate(selectedDate);
-    setIsFixed(false);
-    setStartTime('');
-    setEndTime('');
+    if (!isEdit) {
+      setName('');
+      setDate(selectedDate);
+      setIsFixed(false);
+      setStartTime('');
+      setEndTime('');
+    }
     onClose();
   };
 
@@ -74,7 +101,7 @@ export function TaskEditor({ selectedDate, onAdd, onClose }: TaskEditorProps) {
   return (
     <div className="task-editor-overlay" onClick={onClose}>
       <div className="task-editor" onClick={(e) => e.stopPropagation()}>
-        <h2>添加任务</h2>
+        <h2>{isEdit ? '编辑任务' : '添加任务'}</h2>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>日期</label>
@@ -155,7 +182,7 @@ export function TaskEditor({ selectedDate, onAdd, onClose }: TaskEditorProps) {
 
           <div className="form-actions">
             <button type="button" onClick={onClose}>取消</button>
-            <button type="submit">添加</button>
+            <button type="submit">{isEdit ? '保存' : '添加'}</button>
           </div>
         </form>
       </div>

@@ -8,11 +8,13 @@ import { ExecutionMonitor } from './components/ExecutionMonitor';
 import { AuthModal } from './components/AuthModal';
 import { DateSelector } from './components/DateSelector';
 import { getTodayDate } from './utils/timeUtils';
+import { ScheduledTask } from './types';
 import './App.css';
 
 function App() {
   const { user, loading: authLoading } = useAuth();
   const [selectedDate, setSelectedDate] = useState(getTodayDate);
+  const [editingTask, setEditingTask] = useState<ScheduledTask | null>(null);
   
   const {
     tasks,
@@ -22,6 +24,7 @@ function App() {
     taskStartTime,
     syncing,
     addTask,
+    updateTask,
     deleteTask,
     reorderTasks,
     taskCountByDate,
@@ -47,7 +50,7 @@ function App() {
           >
             {syncing ? '同步中...' : user ? '已同步' : '登录同步'}
           </button>
-          <button className="btn btn-add" onClick={() => setShowEditor(true)}>
+          <button className="btn btn-add" onClick={() => { setEditingTask(null); setShowEditor(true); }}>
             + 添加任务
           </button>
         </div>
@@ -93,6 +96,7 @@ function App() {
             onPause={pauseTask}
             onComplete={completeTask}
             onDelete={deleteTask}
+            onEdit={(task) => { setEditingTask(task); setShowEditor(true); }}
             onReorder={reorderTasks}
             hasAnchorTime={!!anchorTime}
           />
@@ -102,8 +106,10 @@ function App() {
       {showEditor && (
         <TaskEditor
           selectedDate={selectedDate}
+          task={editingTask ?? undefined}
           onAdd={addTask}
-          onClose={() => setShowEditor(false)}
+          onUpdate={updateTask}
+          onClose={() => { setShowEditor(false); setEditingTask(null); }}
         />
       )}
 
