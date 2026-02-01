@@ -1,0 +1,20 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "时长驱动任务规划器主模块"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "时长驱动任务规划器主入口"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "时长驱动任务规划器"
+    },
+    {
+      "name": "permission_internet_reason",
+      "value": "用于加载网络资源（如需要）"
+    }
+  ]
+}

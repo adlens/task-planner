@@ -1,0 +1,1 @@
+{"modelVersion":"6.0.1","name":"task-planner-harmonyos","version":"1.0.0","description":"时长驱动任务规划器 - 鸿蒙版本","main":"","author":"","license":"Apache-2.0","dependencies":{},"devDependencies":{"@ohos/hypium":"1.0.6"}}

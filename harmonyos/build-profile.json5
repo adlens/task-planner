@@ -1,0 +1,50 @@
+{
+  "app": {
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "/Users/adlens/.ohos/config/default_harmonyos_Y_F2DsMj06rWKjJpB2dhf5uT6g4Pv0u0vmRYelPxfZg=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001BAB132CB1763C71BA30C719EB3E7CB3C7F6394F017105AED8CE50B6F1B71E98633D1FF59E0C6945",
+          "profile": "/Users/adlens/.ohos/config/default_harmonyos_Y_F2DsMj06rWKjJpB2dhf5uT6g4Pv0u0vmRYelPxfZg=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "/Users/adlens/.ohos/config/default_harmonyos_Y_F2DsMj06rWKjJpB2dhf5uT6g4Pv0u0vmRYelPxfZg=.p12",
+          "storePassword": "0000001B38BC63AC0D8E8F9A3C250854BC9F09E2A0DBC2CE8798554FF9610A5561E535EB11CE20E7625C6A"
+        }
+      }
+    ],
+    "products": [
+      {
+        "name": "default",
+        "signingConfig": "default",
+        "compatibleSdkVersion": "5.0.0(12)",
+        "targetSdkVersion": "6.0.1(21)",
+        "runtimeOS": "HarmonyOS"
+      }
+    ],
+    "buildModeSet": [
+      {
+        "name": "debug"
+      },
+      {
+        "name": "release"
+      }
+    ]
+  },
+  "modules": [
+    {
+      "name": "entry",
+      "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    }
+  ]
+}

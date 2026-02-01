@@ -1,0 +1,21 @@
+# DevEco Studio
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Build
+build/
+entry/build/
+*.hap
+*.app
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
