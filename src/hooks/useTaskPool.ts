@@ -61,34 +61,48 @@ export function useTaskPool(userId?: string, selectedDate?: string) {
     isInitialized.current = true;
   }, []);
 
+  const fetchFromCloud = useCallback(async () => {
+    if (!userId) return;
+    setSyncing(true);
+    try {
+      const [cloudTasks, cloudAnchorTimes] = await Promise.all([
+        fetchTasksFromCloud(userId),
+        fetchAnchorFromCloud(userId),
+      ]);
+
+      if (cloudTasks.length > 0) {
+        setAllTasks(cloudTasks.map(migrateTask));
+      }
+      if (cloudAnchorTimes && typeof cloudAnchorTimes === 'object') {
+        setAnchorTimes(cloudAnchorTimes);
+      }
+      setLastSyncTime(new Date().toISOString());
+    } catch (error) {
+      console.error('Failed to fetch from cloud:', error);
+    } finally {
+      setSyncing(false);
+    }
+  }, [userId]);
+
   // Fetch from cloud when user logs in
   useEffect(() => {
     if (!userId || !isInitialized.current) return;
+    fetchFromCloud();
+  }, [userId, fetchFromCloud]);
 
-    const fetchFromCloud = async () => {
-      setSyncing(true);
-      try {
-        const [cloudTasks, cloudAnchorTimes] = await Promise.all([
-          fetchTasksFromCloud(userId),
-          fetchAnchorFromCloud(userId),
-        ]);
+  // 当页面重新可见时（切换回标签页/App）拉取云端最新数据，实现跨设备同步
+  useEffect(() => {
+    if (!userId || typeof document === 'undefined') return;
 
-        if (cloudTasks.length > 0) {
-          setAllTasks(cloudTasks.map(migrateTask));
-        }
-        if (cloudAnchorTimes && typeof cloudAnchorTimes === 'object') {
-          setAnchorTimes(cloudAnchorTimes);
-        }
-        setLastSyncTime(new Date().toISOString());
-      } catch (error) {
-        console.error('Failed to fetch from cloud:', error);
-      } finally {
-        setSyncing(false);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchFromCloud();
       }
     };
 
-    fetchFromCloud();
-  }, [userId]);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, [userId, fetchFromCloud]);
 
   // Save to localStorage
   useEffect(() => {
@@ -330,5 +344,6 @@ export function useTaskPool(userId?: string, selectedDate?: string) {
     completeTask,
     resetAndRecalculate,
     taskCountByDate,
+    refreshFromCloud: fetchFromCloud,
   };
 }

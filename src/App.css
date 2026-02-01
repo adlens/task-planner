@@ -315,6 +315,18 @@ body {
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
 }
 
+.btn-refresh {
+  width: 40px;
+  padding: 8px;
+  background: rgba(99, 102, 241, 0.15);
+  color: #6366f1;
+  font-size: 18px;
+}
+
+.btn-refresh:hover:not(:disabled) {
+  background: rgba(99, 102, 241, 0.25);
+}
+
 .btn-start {
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: white;

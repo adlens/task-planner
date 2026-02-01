@@ -23,6 +23,7 @@ function App() {
     currentTaskId,
     taskStartTime,
     syncing,
+    refreshFromCloud,
     addTask,
     updateTask,
     deleteTask,
@@ -50,6 +51,16 @@ function App() {
           >
             {syncing ? '同步中...' : user ? '已同步' : '登录同步'}
           </button>
+          {user && (
+            <button
+              className="btn btn-refresh"
+              onClick={() => refreshFromCloud()}
+              disabled={syncing}
+              title="刷新云端数据"
+            >
+              ↻
+            </button>
+          )}
           <button className="btn btn-add" onClick={() => { setEditingTask(null); setShowEditor(true); }}>
             + 添加任务
           </button>
