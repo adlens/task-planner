@@ -1,14 +1,13 @@
 package com.taskplanner.duration
 
 import android.annotation.SuppressLint
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
-import android.webkit.WebResourceRequest
-import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
-import androidx.webkit.WebViewAssetLoader
 
 class MainActivity : AppCompatActivity() {
 
@@ -17,33 +16,26 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val assetLoader = WebViewAssetLoader.Builder()
-            .setDomain("appassets.androidplatform.net")
-            .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
-            .build()
-
         val webView = findViewById<WebView>(R.id.webView)
         webView.apply {
-            webViewClient = object : WebViewClient() {
-                override fun shouldInterceptRequest(
-                    view: WebView,
-                    request: WebResourceRequest
-                ): WebResourceResponse? {
-                    return assetLoader.shouldInterceptRequest(request.url)
-                }
-            }
-            
+            webViewClient = WebViewClient()
             settings.apply {
                 javaScriptEnabled = true
                 domStorageEnabled = true
-                allowFileAccess = true
-                allowFileAccessFromFileURLs = true
-                allowUniversalAccessFromFileURLs = true
                 cacheMode = WebSettings.LOAD_DEFAULT
             }
-            
-            // 加载路径必须与 PathHandler 匹配
-            loadUrl("https://appassets.androidplatform.net/assets/index.html")
+
+            // 优先加载 intent 携带的 URL（登录回调），否则加载主页
+            val url = intent?.data?.toString() ?: AppConfig.APP_URL
+            loadUrl(url)
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        intent.data?.let { uri ->
+            findViewById<WebView>(R.id.webView).loadUrl(uri.toString())
         }
     }
 }

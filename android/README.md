@@ -1,23 +1,13 @@
 # 时长驱动任务规划器 - Android 版本
 
+## 说明
+
+App 直接加载线上地址 `https://task-planner-lake.vercel.app`，无需本地构建 Web 资源。  
+登录魔法链接会在此 App 内打开，完成认证。
+
 ## 快速开始
 
-### 1. 构建 Web 资源
-
-在项目根目录运行：
-
-```bash
-./build-android.sh
-```
-
-或手动执行：
-
-```bash
-npm run build
-cp -r dist/* android/app/src/main/assets/
-```
-
-### 2. 用 Android Studio 打开
+### 1. 用 Android Studio 打开
 
 1. 打开 Android Studio
 2. **File** → **Open** → 选择 `android` 目录
@@ -51,6 +41,6 @@ android/
 
 ## 技术说明
 
-- 使用 WebView 加载 React 应用
-- 支持 JavaScript、localStorage
-- 使用 `file:///android_asset/` 加载本地资源
+- 使用 WebView 加载线上 React 应用（Vercel 部署）
+- 支持 JavaScript、localStorage、Supabase 同步
+- App Links：登录魔法链接点击后在 App 内打开

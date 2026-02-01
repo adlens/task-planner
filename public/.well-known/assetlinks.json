@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.taskplanner.duration",
+      "sha256_cert_fingerprints": [
+        "BF:23:C2:CA:8B:56:5D:D5:E6:9E:B7:62:8D:ED:22:4B:05:CC:8B:10:80:C9:57:29:BC:EF:69:97:84:81:EA:5D"
+      ]
+    }
+  }
+]
