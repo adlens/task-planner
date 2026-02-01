@@ -25,8 +25,7 @@ class MainActivity : AppCompatActivity() {
                 cacheMode = WebSettings.LOAD_DEFAULT
             }
 
-            // 优先加载 intent 携带的 URL（登录回调），否则加载主页
-            val url = intent?.data?.toString() ?: AppConfig.APP_URL
+            val url = getLoadUrl(intent)
             loadUrl(url)
         }
     }
@@ -35,7 +34,20 @@ class MainActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         intent.data?.let { uri ->
-            findViewById<WebView>(R.id.webView).loadUrl(uri.toString())
+            findViewById<WebView>(R.id.webView).loadUrl(getLoadUrl(intent))
+        }
+    }
+
+    private fun getLoadUrl(intent: Intent?): String {
+        val uri = intent?.data ?: return AppConfig.APP_URL + "?inapp=1"
+        return when (uri.scheme) {
+            "taskplanner" -> {
+                // taskplanner://auth#access_token=... 转为 https URL 带 hash，让 WebView 内 Supabase 完成登录
+                val fragment = uri.fragment ?: ""
+                AppConfig.APP_URL + "?inapp=1" + (if (fragment.isNotEmpty()) "#$fragment" else "")
+            }
+            "https" -> uri.toString()
+            else -> AppConfig.APP_URL + "?inapp=1"
         }
     }
 }

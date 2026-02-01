@@ -19,7 +19,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- App Links: 魔法链接点击后在此 App 内打开 -->
+            <!-- App Links: https 链接 -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -27,6 +27,16 @@
                 <data
                     android:scheme="https"
                     android:host="task-planner-lake.vercel.app"
+                    android:pathPrefix="/" />
+            </intent-filter>
+            <!-- 自定义 scheme: 魔法链接重定向到此，App 内打开完成登录 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="taskplanner"
+                    android:host="auth"
                     android:pathPrefix="/" />
             </intent-filter>
         </activity>

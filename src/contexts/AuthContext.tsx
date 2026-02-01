@@ -44,11 +44,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithEmail = async (email: string) => {
     if (!supabase) return { error: new Error('Offline mode') };
-    
+
+    const isInApp = typeof window !== 'undefined' && /[?&]inapp=1/.test(window.location.href);
+    const redirectTo = isInApp ? 'taskplanner://auth' : window.location.origin;
+
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: redirectTo,
       },
     });
     return { error };
