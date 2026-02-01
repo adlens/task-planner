@@ -74,14 +74,14 @@ export async function deleteTaskFromCloud(taskId: string): Promise<void> {
 }
 
 // 保存锚点时间到云端
-export async function syncAnchorToCloud(userId: string, anchorTime: string | undefined): Promise<void> {
+export async function syncAnchorToCloud(userId: string, anchorTimes: Record<string, string> | undefined): Promise<void> {
   if (!supabase) return;
 
   const { error } = await supabase
     .from('user_settings')
     .upsert({
       user_id: userId,
-      anchor_time: anchorTime,
+      anchor_times: anchorTimes || {},
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' });
 
@@ -91,18 +91,24 @@ export async function syncAnchorToCloud(userId: string, anchorTime: string | und
 }
 
 // 从云端获取锚点时间
-export async function fetchAnchorFromCloud(userId: string): Promise<string | undefined> {
+export async function fetchAnchorFromCloud(userId: string): Promise<Record<string, string> | undefined> {
   if (!supabase) return undefined;
 
   const { data, error } = await supabase
     .from('user_settings')
-    .select('anchor_time')
+    .select('anchor_times, anchor_time')
     .eq('user_id', userId)
     .single();
 
-  if (error && error.code !== 'PGRST116') { // PGRST116 = no rows
+  if (error && error.code !== 'PGRST116') {
     console.error('Failed to fetch anchor:', error);
   }
 
-  return data?.anchor_time || undefined;
+  if (data?.anchor_times && typeof data.anchor_times === 'object') {
+    return data.anchor_times;
+  }
+  if (data?.anchor_time) {
+    return { [new Date().toISOString().slice(0, 10)]: data.anchor_time };
+  }
+  return undefined;
 }

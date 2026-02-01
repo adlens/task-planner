@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Task } from '../types';
 
 interface TaskEditorProps {
+  selectedDate: string;
   onAdd: (task: Omit<Task, 'id' | 'status'>) => void;
   onClose: () => void;
 }
@@ -9,7 +10,7 @@ interface TaskEditorProps {
 const STORAGE_KEY_DURATION = 'taskEditor_lastDuration';
 const STORAGE_KEY_PRIORITY = 'taskEditor_lastPriority';
 
-export function TaskEditor({ onAdd, onClose }: TaskEditorProps) {
+export function TaskEditor({ selectedDate, onAdd, onClose }: TaskEditorProps) {
   // Load last values from localStorage on mount
   const getLastDuration = (): number => {
     const saved = localStorage.getItem(STORAGE_KEY_DURATION);
@@ -22,6 +23,8 @@ export function TaskEditor({ onAdd, onClose }: TaskEditorProps) {
   };
 
   const [name, setName] = useState('');
+  const [date, setDate] = useState(selectedDate);
+  useEffect(() => { setDate(selectedDate); }, [selectedDate]);
   const [duration, setDuration] = useState(getLastDuration);
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>(getLastPriority);
   const [isFixed, setIsFixed] = useState(false);
@@ -42,6 +45,7 @@ export function TaskEditor({ onAdd, onClose }: TaskEditorProps) {
     }
 
     onAdd({
+      date,
       name: name.trim(),
       estimatedDuration: duration,
       priority,
@@ -56,6 +60,7 @@ export function TaskEditor({ onAdd, onClose }: TaskEditorProps) {
 
     // Reset form (but keep duration and priority for next time)
     setName('');
+    setDate(selectedDate);
     setIsFixed(false);
     setStartTime('');
     setEndTime('');
@@ -71,6 +76,14 @@ export function TaskEditor({ onAdd, onClose }: TaskEditorProps) {
       <div className="task-editor" onClick={(e) => e.stopPropagation()}>
         <h2>添加任务</h2>
         <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label>日期</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
+          </div>
           <div className="form-group">
             <label>任务名称 *</label>
             <input

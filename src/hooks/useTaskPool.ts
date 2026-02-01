@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import dayjs from 'dayjs';
 import { Task, ScheduledTask, TaskPool } from '../types';
 import { scheduleTasks, updateTaskStatus } from '../utils/scheduler';
-import { getCurrentTime } from '../utils/timeUtils';
+import { getCurrentTime, getTodayDate } from '../utils/timeUtils';
 import {
   syncTasksToCloud,
   fetchTasksFromCloud,
@@ -13,9 +13,13 @@ import {
 
 const STORAGE_KEY = 'taskPool';
 
-export function useTaskPool(userId?: string) {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [anchorTime, setAnchorTime] = useState<string | undefined>();
+function migrateTask(t: Task & { date?: string }): Task {
+  return { ...t, date: t.date || dayjs(t.actualStartTime || t.startTime).format('YYYY-MM-DD') || getTodayDate() };
+}
+
+export function useTaskPool(userId?: string, selectedDate?: string) {
+  const [allTasks, setAllTasks] = useState<Task[]>([]);
+  const [anchorTimes, setAnchorTimes] = useState<Record<string, string>>({});
   const [scheduledTasks, setScheduledTasks] = useState<ScheduledTask[]>([]);
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
   const [taskStartTime, setTaskStartTime] = useState<string | null>(null);
@@ -27,14 +31,29 @@ export function useTaskPool(userId?: string) {
   const tasksRef = useRef<Task[]>([]);
   const lastRecalcAnchor = useRef<string | undefined>();
 
+  const date = selectedDate || getTodayDate();
+  const tasks = useMemo(() => allTasks.filter(t => t.date === date), [allTasks, date]);
+  const anchorTime = anchorTimes[date];
+
+  const setAnchorTime = useCallback((anchor: string | undefined) => {
+    setAnchorTimes(prev => anchor ? { ...prev, [date]: anchor } : (() => { const { [date]: _, ...r } = prev; return r; })());
+  }, [date]);
+
   // Load from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
-        const pool: TaskPool = JSON.parse(saved);
-        setTasks(pool.tasks || []);
-        setAnchorTime(pool.anchorTime);
+        const pool: TaskPool & { tasks?: (Task & { date?: string })[] } = JSON.parse(saved);
+        const rawTasks = pool.tasks || [];
+        const migrated = rawTasks.map(migrateTask);
+        setAllTasks(migrated);
+        if (pool.anchorTimes) {
+          setAnchorTimes(pool.anchorTimes);
+        } else if (pool.anchorTime) {
+          const d = rawTasks[0] ? migrateTask(rawTasks[0]).date : getTodayDate();
+          setAnchorTimes({ [d]: pool.anchorTime });
+        }
       } catch (e) {
         console.error('Failed to load task pool:', e);
       }
@@ -49,17 +68,16 @@ export function useTaskPool(userId?: string) {
     const fetchFromCloud = async () => {
       setSyncing(true);
       try {
-        const [cloudTasks, cloudAnchor] = await Promise.all([
+        const [cloudTasks, cloudAnchorTimes] = await Promise.all([
           fetchTasksFromCloud(userId),
           fetchAnchorFromCloud(userId),
         ]);
 
-        // 合并策略：云端数据优先（如果有的话）
         if (cloudTasks.length > 0) {
-          setTasks(cloudTasks);
+          setAllTasks(cloudTasks.map(migrateTask));
         }
-        if (cloudAnchor) {
-          setAnchorTime(cloudAnchor);
+        if (cloudAnchorTimes && typeof cloudAnchorTimes === 'object') {
+          setAnchorTimes(cloudAnchorTimes);
         }
         setLastSyncTime(new Date().toISOString());
       } catch (error) {
@@ -72,38 +90,35 @@ export function useTaskPool(userId?: string) {
     fetchFromCloud();
   }, [userId]);
 
-  // Save to localStorage whenever tasks or anchorTime changes
+  // Save to localStorage
   useEffect(() => {
     if (!isInitialized.current) return;
-    const pool: TaskPool = { tasks, anchorTime };
+    const pool: TaskPool = { tasks: allTasks, anchorTimes };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(pool));
-  }, [tasks, anchorTime]);
+  }, [allTasks, anchorTimes]);
 
-  // Sync to cloud when tasks or anchorTime changes (debounced)
+  // Sync to cloud
   useEffect(() => {
     if (!userId || !isInitialized.current) return;
 
     const syncTimeout = setTimeout(async () => {
       try {
-        // 处理待删除的任务
         for (const taskId of pendingDeletes.current) {
           await deleteTaskFromCloud(taskId);
         }
         pendingDeletes.current = [];
-
-        // 同步任务和锚点
         await Promise.all([
-          syncTasksToCloud(userId, tasks),
-          syncAnchorToCloud(userId, anchorTime),
+          syncTasksToCloud(userId, allTasks),
+          syncAnchorToCloud(userId, anchorTimes),
         ]);
         setLastSyncTime(new Date().toISOString());
       } catch (error) {
         console.error('Failed to sync to cloud:', error);
       }
-    }, 1000); // 1秒防抖
+    }, 1000);
 
     return () => clearTimeout(syncTimeout);
-  }, [userId, tasks, anchorTime]);
+  }, [userId, allTasks, anchorTimes]);
 
   tasksRef.current = tasks;
 
@@ -185,9 +200,7 @@ export function useTaskPool(userId?: string) {
         }
       }
 
-      return result.sort((a, b) =>
-        dayjs(a.calculatedStartTime).diff(dayjs(b.calculatedStartTime))
-      );
+      return result; // 保持任务顺序，不按时间重排（支持拖拽调序）
     });
   }, [tasks, anchorTime]);
 
@@ -200,21 +213,32 @@ export function useTaskPool(userId?: string) {
     return () => clearInterval(interval);
   }, []);
 
-  const addTask = (task: Omit<Task, 'id' | 'status'>) => {
+  const addTask = useCallback((task: Omit<Task, 'id' | 'status'>) => {
     const newTask: Task = {
       ...task,
+      date: task.date || date,
       id: crypto.randomUUID(),
       status: 'pending',
     };
-    setTasks([...tasks, newTask]);
-  };
+    setAllTasks(prev => [...prev, newTask]);
+  }, [date]);
 
-  const updateTask = (id: string, updates: Partial<Task>) => {
-    setTasks(tasks.map(t => t.id === id ? { ...t, ...updates } : t));
-  };
+  const updateTask = useCallback((id: string, updates: Partial<Task>) => {
+    setAllTasks(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+  }, []);
+
+  const reorderTasks = useCallback((activeIds: string[]) => {
+    setAllTasks(prev => {
+      const forDate = prev.filter(t => t.date === date);
+      const byId = new Map(forDate.map(t => [t.id, t]));
+      const ordered: Task[] = activeIds.map(id => byId.get(id)).filter((t): t is Task => !!t);
+      const otherDates = prev.filter(t => t.date !== date);
+      return [...ordered, ...otherDates];
+    });
+  }, [date]);
 
   const deleteTask = useCallback((id: string) => {
-    setTasks(prev => prev.filter(t => t.id !== id));
+    setAllTasks(prev => prev.filter(t => t.id !== id));
     pendingDeletes.current.push(id);
     if (currentTaskId === id) {
       setCurrentTaskId(null);
@@ -247,9 +271,9 @@ export function useTaskPool(userId?: string) {
     }
   };
 
-  const completeTask = (id: string) => {
+  const completeTask = useCallback((id: string) => {
     const now = getCurrentTime();
-    const task = tasks.find(t => t.id === id);
+    const task = allTasks.find(t => t.id === id);
     const scheduledTask = scheduledTasks.find(s => s.id === id);
     if (task) {
       const actualDuration = task.actualDuration || task.estimatedDuration;
@@ -263,26 +287,30 @@ export function useTaskPool(userId?: string) {
     }
     setCurrentTaskId(null);
     setTaskStartTime(null);
-  };
+  }, [allTasks, scheduledTasks, updateTask]);
 
-  const resetAndRecalculate = () => {
+  const resetAndRecalculate = useCallback(() => {
     const now = getCurrentTime();
     
-    // Reset in-progress tasks to pending
-    setTasks(tasks.map(t => {
-      if (t.status === 'in-progress') {
+    setAllTasks(prev => prev.map(t => {
+      if (t.date === date && t.status === 'in-progress') {
         return { ...t, status: 'pending' };
       }
       return t;
     }));
     
-    // Update anchor time to now - this will trigger recalculation via useEffect
     setAnchorTime(now);
-    
-    // Clear current task tracking
     setCurrentTaskId(null);
     setTaskStartTime(null);
-  };
+  }, [date, setAnchorTime]);
+
+  const taskCountByDate = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const t of allTasks) {
+      counts[t.date] = (counts[t.date] || 0) + 1;
+    }
+    return counts;
+  }, [allTasks]);
 
   return {
     tasks,
@@ -295,10 +323,12 @@ export function useTaskPool(userId?: string) {
     addTask,
     updateTask,
     deleteTask,
+    reorderTasks,
     setAnchorTime,
     startTask,
     pauseTask,
     completeTask,
     resetAndRecalculate,
+    taskCountByDate,
   };
 }

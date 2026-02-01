@@ -1,5 +1,7 @@
 export interface Task {
   id: string;
+  /** 任务所属日期 YYYY-MM-DD */
+  date: string;
   name: string;
   estimatedDuration: number; // in minutes
   priority: 'low' | 'medium' | 'high';
@@ -22,5 +24,8 @@ export interface ScheduledTask extends Task {
 
 export interface TaskPool {
   tasks: Task[];
-  anchorTime?: string; // ISO string, the wake-up time
+  /** 每日期锚点时间 */
+  anchorTimes?: Record<string, string>;
+  /** @deprecated 兼容旧数据 */
+  anchorTime?: string;
 }

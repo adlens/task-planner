@@ -6,10 +6,13 @@ import { TaskList } from './components/TaskList';
 import { AnchorInput } from './components/AnchorInput';
 import { ExecutionMonitor } from './components/ExecutionMonitor';
 import { AuthModal } from './components/AuthModal';
+import { DateSelector } from './components/DateSelector';
+import { getTodayDate } from './utils/timeUtils';
 import './App.css';
 
 function App() {
   const { user, loading: authLoading } = useAuth();
+  const [selectedDate, setSelectedDate] = useState(getTodayDate);
   
   const {
     tasks,
@@ -20,12 +23,14 @@ function App() {
     syncing,
     addTask,
     deleteTask,
+    reorderTasks,
+    taskCountByDate,
     setAnchorTime,
     startTask,
     pauseTask,
     completeTask,
     resetAndRecalculate,
-  } = useTaskPool(user?.id);
+  } = useTaskPool(user?.id, selectedDate);
 
   const [showEditor, setShowEditor] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
@@ -59,7 +64,12 @@ function App() {
 
         <div className="right-panel">
           <div className="schedule-header">
-            <h2>{anchorTime ? '今日日程' : '任务列表'}</h2>
+            <DateSelector
+              selectedDate={selectedDate}
+              onSelect={setSelectedDate}
+              taskCountByDate={taskCountByDate}
+            />
+            <h2>{anchorTime ? '日程' : '任务列表'}</h2>
             {anchorTime ? (
               <p className="schedule-info">
                 基于起始时间: {new Date(anchorTime).toLocaleString('zh-CN')}
@@ -83,6 +93,7 @@ function App() {
             onPause={pauseTask}
             onComplete={completeTask}
             onDelete={deleteTask}
+            onReorder={reorderTasks}
             hasAnchorTime={!!anchorTime}
           />
         </div>
@@ -90,6 +101,7 @@ function App() {
 
       {showEditor && (
         <TaskEditor
+          selectedDate={selectedDate}
           onAdd={addTask}
           onClose={() => setShowEditor(false)}
         />

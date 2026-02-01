@@ -76,6 +76,82 @@ body {
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
+/* 日期选择器 */
+.date-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.date-nav-btn {
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.8);
+  font-size: 20px;
+  color: #4a5568;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.date-nav-btn:hover {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+}
+
+.date-display {
+  flex: 1;
+  padding: 10px 16px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.8);
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a202c;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.date-display:hover {
+  background: rgba(102, 126, 234, 0.08);
+}
+
+.date-display.today {
+  border-color: #667eea;
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.date-count {
+  font-size: 12px;
+  font-weight: 500;
+  color: #718096;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.date-today-btn {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(102, 126, 234, 0.2);
+  font-size: 13px;
+  color: #667eea;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.date-today-btn:hover {
+  background: rgba(102, 126, 234, 0.3);
+}
+
 .schedule-header h2 {
   font-size: 20px;
   color: #1a202c;
@@ -305,6 +381,12 @@ body {
   gap: 8px;
 }
 
+.task-list-hint {
+  font-size: 12px;
+  color: #718096;
+  margin-bottom: 8px;
+}
+
 .empty-state {
   text-align: center;
   padding: 60px 20px;
@@ -375,6 +457,21 @@ body {
   flex-direction: column;
   align-items: stretch;
   gap: 10px;
+}
+
+/* 可拖拽任务列表的样式 */
+.task-list-sortable .task-item.compact {
+  cursor: grab;
+  touch-action: none;
+}
+
+.task-list-sortable .task-item.compact:active {
+  cursor: grabbing;
+}
+
+.task-item.compact.dragging {
+  opacity: 0.7;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 }
 
 .task-item:hover {

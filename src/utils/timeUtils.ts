@@ -53,6 +53,22 @@ export function getCurrentTime(): string {
 }
 
 /**
+ * Get today's date as YYYY-MM-DD
+ */
+export function getTodayDate(): string {
+  return dayjs().format('YYYY-MM-DD');
+}
+
+/**
+ * Format date for display (e.g. 2月1日 周五)
+ */
+export function formatDateDisplay(dateStr: string): string {
+  const d = dayjs(dateStr);
+  const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+  return `${d.format('M月D日')} ${weekdays[d.day()]}`;
+}
+
+/**
  * Check if a time is in the past
  */
 export function isPast(timeStr: string): boolean {
