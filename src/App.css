@@ -745,6 +745,12 @@ body {
   margin-right: 8px;
 }
 
+.form-hint {
+  font-size: 12px;
+  color: #718096;
+  margin: -8px 0 16px 0;
+}
+
 .form-actions {
   display: flex;
   gap: 12px;

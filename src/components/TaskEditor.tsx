@@ -31,8 +31,9 @@ export function TaskEditor({ selectedDate, task, onAdd, onUpdate, onClose }: Tas
   const [duration, setDuration] = useState(task?.estimatedDuration ?? getLastDuration);
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>(task?.priority ?? getLastPriority);
   const [isFixed, setIsFixed] = useState(task?.isFixed ?? false);
-  const [startTime, setStartTime] = useState(task?.startTime ? task.startTime.slice(0, 16) : '');
-  const [endTime, setEndTime] = useState(task?.endTime ? task.endTime.slice(0, 16) : '');
+  const formatTimeInput = (iso: string) => iso ? new Date(iso).toTimeString().slice(0, 5) : '';
+  const [startTimeStr, setStartTimeStr] = useState(task?.startTime ? formatTimeInput(task.startTime) : '9:00');
+  const [endTimeStr, setEndTimeStr] = useState(task?.endTime ? formatTimeInput(task.endTime) : '10:00');
 
   useEffect(() => {
     if (task) {
@@ -41,62 +42,87 @@ export function TaskEditor({ selectedDate, task, onAdd, onUpdate, onClose }: Tas
       setDuration(task.estimatedDuration);
       setPriority(task.priority);
       setIsFixed(task.isFixed);
-      setStartTime(task.startTime ? task.startTime.slice(0, 16) : '');
-      setEndTime(task.endTime ? task.endTime.slice(0, 16) : '');
+      setStartTimeStr(task.startTime ? formatTimeInput(task.startTime) : '9:00');
+      setEndTimeStr(task.endTime ? formatTimeInput(task.endTime) : '10:00');
     }
   }, [task]);
 
+  const parseTimeToISO = (dateStr: string, timeStr: string): string | null => {
+    const parts = timeStr.trim().split(/[:\s：]/).map((s) => parseInt(s, 10));
+    const h = parts[0];
+    const m = parts[1] ?? 0;
+    if (isNaN(h) || h < 0 || h > 23 || isNaN(m) || m < 0 || m > 59) return null;
+    return new Date(`${dateStr}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`).toISOString();
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!name.trim()) {
       alert('请输入任务名称');
       return;
     }
 
-    if (isFixed && (!startTime || !endTime)) {
-      alert('固定时间任务必须设置开始和结束时间');
-      return;
+    let finalDuration = duration;
+    let startISO: string | undefined;
+    let endISO: string | undefined;
+
+    if (isFixed) {
+      if (!startTimeStr.trim() || !endTimeStr.trim()) {
+        alert('固定时间任务必须设置开始和结束时间');
+        return;
+      }
+      const parsedStart = parseTimeToISO(date, startTimeStr);
+      const parsedEnd = parseTimeToISO(date, endTimeStr);
+      if (!parsedStart || !parsedEnd) {
+        alert('时间格式有误，请使用 9:30 或 14:00 格式');
+        return;
+      }
+      startISO = parsedStart;
+      endISO = parsedEnd;
+      const startMs = new Date(startISO).getTime();
+      const endMs = new Date(endISO).getTime();
+      if (endMs <= startMs) {
+        alert('结束时间必须晚于开始时间');
+        return;
+      }
+      finalDuration = Math.round((endMs - startMs) / (1000 * 60));
     }
 
     if (isEdit && task && onUpdate) {
       onUpdate(task.id, {
         date,
         name: name.trim(),
-        estimatedDuration: duration,
+        estimatedDuration: finalDuration,
         priority,
         isFixed,
-        startTime: isFixed ? new Date(startTime).toISOString() : undefined,
-        endTime: isFixed ? new Date(endTime).toISOString() : undefined,
+        startTime: startISO,
+        endTime: endISO,
       });
     } else {
       onAdd({
         date,
         name: name.trim(),
-        estimatedDuration: duration,
+        estimatedDuration: finalDuration,
         priority,
         isFixed,
-        startTime: isFixed ? new Date(startTime).toISOString() : undefined,
-        endTime: isFixed ? new Date(endTime).toISOString() : undefined,
+        startTime: startISO,
+        endTime: endISO,
       });
     }
 
-    localStorage.setItem(STORAGE_KEY_DURATION, duration.toString());
+    localStorage.setItem(STORAGE_KEY_DURATION, finalDuration.toString());
     localStorage.setItem(STORAGE_KEY_PRIORITY, priority);
 
     if (!isEdit) {
       setName('');
       setDate(selectedDate);
       setIsFixed(false);
-      setStartTime('');
-      setEndTime('');
+      setStartTimeStr('9:00');
+      setEndTimeStr('10:00');
     }
     onClose();
   };
-
-  const now = new Date();
-  const defaultStart = new Date(now.getTime() + 60 * 60 * 1000).toISOString().slice(0, 16);
-  const defaultEnd = new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString().slice(0, 16);
 
   return (
     <div className="task-editor-overlay" onClick={onClose}>
@@ -122,16 +148,18 @@ export function TaskEditor({ selectedDate, task, onAdd, onUpdate, onClose }: Tas
             />
           </div>
 
-          <div className="form-group">
-            <label>预估时长（分钟）</label>
-            <input
-              type="number"
-              value={duration}
-              onChange={(e) => setDuration(parseInt(e.target.value) || 0)}
-              min="1"
-              required
-            />
-          </div>
+          {!isFixed && (
+            <div className="form-group">
+              <label>预估时长（分钟）</label>
+              <input
+                type="number"
+                value={duration}
+                onChange={(e) => setDuration(parseInt(e.target.value) || 0)}
+                min="1"
+                required
+              />
+            </div>
+          )}
 
           <div className="form-group">
             <label>优先级</label>
@@ -161,22 +189,25 @@ export function TaskEditor({ selectedDate, task, onAdd, onUpdate, onClose }: Tas
               <div className="form-group">
                 <label>开始时间 *</label>
                 <input
-                  type="datetime-local"
-                  value={startTime || defaultStart}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  required={isFixed}
+                  type="text"
+                  value={startTimeStr}
+                  onChange={(e) => setStartTimeStr(e.target.value)}
+                  placeholder="9:00"
+                  inputMode="numeric"
                 />
               </div>
 
               <div className="form-group">
                 <label>结束时间 *</label>
                 <input
-                  type="datetime-local"
-                  value={endTime || defaultEnd}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  required={isFixed}
+                  type="text"
+                  value={endTimeStr}
+                  onChange={(e) => setEndTimeStr(e.target.value)}
+                  placeholder="10:30"
+                  inputMode="numeric"
                 />
               </div>
+              <p className="form-hint">直接输入时间，如 9:00、14:30</p>
             </>
           )}
 
