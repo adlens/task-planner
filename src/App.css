@@ -293,13 +293,23 @@ body {
   align-items: center;
 }
 
-.sync-error {
-  font-size: 12px;
-  color: #dc2626;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 120px;
+/* 同步失败横幅：整行显示，可换行，手机上也能看清完整错误 */
+.sync-error-banner {
+  padding: 10px 16px;
+  background: rgba(220, 38, 38, 0.12);
+  color: #b91c1c;
+  font-size: 14px;
+  line-height: 1.4;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.sync-error-banner .sync-error-label {
+  font-weight: 600;
+}
+
+.sync-error-banner .sync-error-msg {
+  display: inline;
 }
 
 .btn-add {

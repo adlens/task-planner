@@ -66,9 +66,6 @@ function App() {
                   <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
                 </svg>
               </button>
-              {syncError && (
-                <span className="sync-error" title={syncError}>同步失败</span>
-              )}
             </>
           )}
           <button className="btn btn-add" onClick={() => { setEditingTask(null); setShowEditor(true); }}>
@@ -76,6 +73,13 @@ function App() {
           </button>
         </div>
       </header>
+
+      {syncError && (
+        <div className="sync-error-banner" role="alert">
+          <span className="sync-error-label">同步失败：</span>
+          <span className="sync-error-msg">{syncError}</span>
+        </div>
+      )}
 
       <main className="app-main">
         <div className="left-panel">
