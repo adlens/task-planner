@@ -82,6 +82,33 @@ export function useTaskPool(userId?: string, selectedDate?: string) {
     }
   }, [userId]);
 
+  // 点击「同步」时：先推送本地数据再拉取，避免刚添加的任务被覆盖
+  const refreshFromCloud = useCallback(async () => {
+    if (!userId) return;
+    setSyncing(true);
+    try {
+      for (const taskId of pendingDeletes.current) {
+        await deleteTaskFromCloud(taskId);
+      }
+      pendingDeletes.current = [];
+      await syncTasksToCloud(userId, allTasks);
+      await syncAnchorToCloud(userId, anchorTimes);
+      const [cloudTasks, cloudAnchorTimes] = await Promise.all([
+        fetchTasksFromCloud(userId),
+        fetchAnchorFromCloud(userId),
+      ]);
+      setAllTasks(cloudTasks.map(migrateTask));
+      if (cloudAnchorTimes && typeof cloudAnchorTimes === 'object') {
+        setAnchorTimes(cloudAnchorTimes);
+      }
+      setLastSyncTime(new Date().toISOString());
+    } catch (error) {
+      console.error('Failed to sync:', error);
+    } finally {
+      setSyncing(false);
+    }
+  }, [userId, allTasks, anchorTimes]);
+
   // Fetch from cloud when user logs in
   useEffect(() => {
     if (!userId || !isInitialized.current) return;
@@ -342,6 +369,6 @@ export function useTaskPool(userId?: string, selectedDate?: string) {
     completeTask,
     resetAndRecalculate,
     taskCountByDate,
-    refreshFromCloud: fetchFromCloud,
+    refreshFromCloud,
   };
 }

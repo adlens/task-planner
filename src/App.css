@@ -323,6 +323,12 @@ body {
   font-size: 18px;
 }
 
+.btn-refresh .icon-refresh {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
 .btn-refresh:hover:not(:disabled) {
   background: rgba(99, 102, 241, 0.25);
 }
