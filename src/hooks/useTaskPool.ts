@@ -112,7 +112,15 @@ export function useTaskPool(userId?: string, selectedDate?: string) {
       }
       setLastSyncTime(new Date().toISOString());
     } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
+      let msg: string;
+      if (error instanceof Error) {
+        msg = error.message;
+      } else if (error && typeof error === 'object') {
+        const o = error as { message?: string; details?: string; code?: string; error_description?: string };
+        msg = o.message ?? o.details ?? o.error_description ?? o.code ?? JSON.stringify(error);
+      } else {
+        msg = String(error);
+      }
       console.error('Failed to sync:', error);
       setSyncError(msg);
     } finally {
