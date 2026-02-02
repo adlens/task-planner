@@ -70,9 +70,7 @@ export function useTaskPool(userId?: string, selectedDate?: string) {
         fetchAnchorFromCloud(userId),
       ]);
 
-      if (cloudTasks.length > 0) {
-        setAllTasks(cloudTasks.map(migrateTask));
-      }
+      setAllTasks(cloudTasks.map(migrateTask));
       if (cloudAnchorTimes && typeof cloudAnchorTimes === 'object') {
         setAnchorTimes(cloudAnchorTimes);
       }
