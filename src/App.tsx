@@ -23,6 +23,7 @@ function App() {
     currentTaskId,
     taskStartTime,
     syncing,
+    syncError,
     refreshFromCloud,
     addTask,
     updateTask,
@@ -52,18 +53,23 @@ function App() {
             {syncing ? '同步中...' : user ? '已同步' : '登录同步'}
           </button>
           {user && (
-            <button
-              className="btn btn-refresh"
-              onClick={() => refreshFromCloud()}
-              disabled={syncing}
-              title="刷新云端数据"
-              aria-label="刷新云端数据"
-            >
-              <svg className="icon-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M23 4v6h-6M1 20v-6h6" />
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-              </svg>
-            </button>
+            <>
+              <button
+                className="btn btn-refresh"
+                onClick={() => refreshFromCloud()}
+                disabled={syncing}
+                title="刷新云端数据"
+                aria-label="刷新云端数据"
+              >
+                <svg className="icon-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M23 4v6h-6M1 20v-6h6" />
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                </svg>
+              </button>
+              {syncError && (
+                <span className="sync-error" title={syncError}>同步失败</span>
+              )}
+            </>
           )}
           <button className="btn btn-add" onClick={() => { setEditingTask(null); setShowEditor(true); }}>
             + 添加任务

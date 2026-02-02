@@ -51,7 +51,7 @@ function dbToTask(row: Record<string, unknown>): Task {
 
 // 同步任务到云端
 export async function syncTasksToCloud(userId: string, tasks: Task[]): Promise<void> {
-  if (!supabase) return;
+  if (!supabase) throw new Error('云端未配置');
 
   const dbRows = tasks.map((task) =>
     taskToDb({
@@ -106,7 +106,7 @@ export async function deleteTaskFromCloud(taskId: string): Promise<void> {
 
 // 保存锚点时间到云端
 export async function syncAnchorToCloud(userId: string, anchorTimes: Record<string, string> | undefined): Promise<void> {
-  if (!supabase) return;
+  if (!supabase) throw new Error('云端未配置');
 
   const { error } = await supabase
     .from('user_settings')

@@ -25,11 +25,17 @@ export function useTaskPool(userId?: string, selectedDate?: string) {
   const [taskStartTime, setTaskStartTime] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
   
   const isInitialized = useRef(false);
   const pendingDeletes = useRef<string[]>([]);
   const tasksRef = useRef<Task[]>([]);
+  const allTasksRef = useRef<Task[]>([]);
+  const anchorTimesRef = useRef<Record<string, string>>({});
   const lastRecalcAnchor = useRef<string | undefined>();
+
+  allTasksRef.current = allTasks;
+  anchorTimesRef.current = anchorTimes;
 
   const date = selectedDate || getTodayDate();
   const tasks = useMemo(() => allTasks.filter(t => t.date === date), [allTasks, date]);
@@ -82,17 +88,20 @@ export function useTaskPool(userId?: string, selectedDate?: string) {
     }
   }, [userId]);
 
-  // 点击「同步」时：先推送本地数据再拉取，避免刚添加的任务被覆盖
+  // 点击「同步」时：先推送本地数据再拉取。用 ref 取最新 allTasks/anchorTimes，避免闭包滞后导致刚加的任务未上传。
   const refreshFromCloud = useCallback(async () => {
     if (!userId) return;
     setSyncing(true);
+    setSyncError(null);
+    const tasksToPush = allTasksRef.current;
+    const anchorsToPush = anchorTimesRef.current;
     try {
       for (const taskId of pendingDeletes.current) {
         await deleteTaskFromCloud(taskId);
       }
       pendingDeletes.current = [];
-      await syncTasksToCloud(userId, allTasks);
-      await syncAnchorToCloud(userId, anchorTimes);
+      await syncTasksToCloud(userId, tasksToPush);
+      await syncAnchorToCloud(userId, anchorsToPush);
       const [cloudTasks, cloudAnchorTimes] = await Promise.all([
         fetchTasksFromCloud(userId),
         fetchAnchorFromCloud(userId),
@@ -103,11 +112,13 @@ export function useTaskPool(userId?: string, selectedDate?: string) {
       }
       setLastSyncTime(new Date().toISOString());
     } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
       console.error('Failed to sync:', error);
+      setSyncError(msg);
     } finally {
       setSyncing(false);
     }
-  }, [userId, allTasks, anchorTimes]);
+  }, [userId]);
 
   // Fetch from cloud when user logs in
   useEffect(() => {
@@ -359,6 +370,7 @@ export function useTaskPool(userId?: string, selectedDate?: string) {
     taskStartTime,
     syncing,
     lastSyncTime,
+    syncError,
     addTask,
     updateTask,
     deleteTask,
