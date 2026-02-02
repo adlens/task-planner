@@ -13,6 +13,39 @@ import {
 
 const STORAGE_KEY = 'taskPool';
 
+/** 从任意 error 得到可显示的字符串，避免 [object Object] */
+function errorToMessage(error: unknown): string {
+  if (error == null) return '未知错误';
+  if (typeof error === 'string') return error;
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'object') {
+    const o = error as Record<string, unknown>;
+    const m = o.message ?? o.details ?? o.error_description ?? o.code;
+    if (typeof m === 'string') return m;
+    const nested = o.error && typeof o.error === 'object' ? (o.error as Record<string, unknown>) : null;
+    const nm = nested && (typeof nested.message === 'string' ? nested.message : typeof nested.details === 'string' ? nested.details : null);
+    if (nm) return nm;
+    if (m != null && typeof m === 'object') {
+      try {
+        return JSON.stringify(m);
+      } catch {
+        return '同步错误';
+      }
+    }
+    try {
+      const parts: string[] = [];
+      if (o.message != null) parts.push(String(o.message));
+      if (o.details != null) parts.push(String(o.details));
+      if (o.code != null) parts.push(String(o.code));
+      if (parts.length) return parts.join(' ');
+      return JSON.stringify(o);
+    } catch {
+      return '同步错误，请查看浏览器控制台';
+    }
+  }
+  return String(error);
+}
+
 function migrateTask(t: Task & { date?: string }): Task {
   return { ...t, date: t.date || dayjs(t.actualStartTime || t.startTime).format('YYYY-MM-DD') || getTodayDate() };
 }
@@ -112,17 +145,8 @@ export function useTaskPool(userId?: string, selectedDate?: string) {
       }
       setLastSyncTime(new Date().toISOString());
     } catch (error) {
-      let msg: string;
-      if (error instanceof Error) {
-        msg = error.message;
-      } else if (error && typeof error === 'object') {
-        const o = error as { message?: string; details?: string; code?: string; error_description?: string };
-        msg = o.message ?? o.details ?? o.error_description ?? o.code ?? JSON.stringify(error);
-      } else {
-        msg = String(error);
-      }
       console.error('Failed to sync:', error);
-      setSyncError(msg);
+      setSyncError(errorToMessage(error));
     } finally {
       setSyncing(false);
     }

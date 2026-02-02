@@ -74,10 +74,10 @@ function App() {
         </div>
       </header>
 
-      {syncError && (
+      {syncError != null && syncError !== '' && (
         <div className="sync-error-banner" role="alert">
           <span className="sync-error-label">同步失败：</span>
-          <span className="sync-error-msg">{syncError}</span>
+          <span className="sync-error-msg">{typeof syncError === 'string' ? syncError : JSON.stringify(syncError)}</span>
         </div>
       )}
 
